@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""A beautifier for Bash shell scripts written in Python."""
+# -*- coding: utf-8 -*-
+""" bash脚本美化分析工具 注意：不兼容python2  """
 import argparse
 import difflib
 import os
 import re
 import sys
-
 import pkg_resources  # part of setuptools
 from colorama import Fore
 
@@ -97,7 +97,7 @@ class Beautify:
         test_record = re.sub(r"(\A|\s)(#.*)", "", test_record, 1)
         return test_record
 
-    def beautify_string(self, data, path=""):
+    def _core(self, data, path=""):
         """Beautify string (file part)."""
         tab = 0
         case_level = 0
@@ -271,10 +271,38 @@ class Beautify:
                 open_brackets -= len(re.findall(r"\]", test_record))
             line += 1
         error = tab != 0
+        
+        return output, error
+
+    # 清理注释和空行
+    # by jimmy
+    def _clean(self, output):
+        re = []
+        for line in output:
+            t = line.strip()
+            if t == '' or t.startswith('#'):
+                continue
+            else:
+                re.append(line)
+        return re
+
+    # 快捷方法：从文件读取
+    # by jimmy
+    def from_file(self, filename, clean=True):
+        output, error = self._core(self.read_file(filename))
+        if clean:
+            return self._clean(output), error
+        else:
+            return output, error
+
+    # 处理字符串
+    def beautify_string(self, data, path=""):
+        output, error = self._core(data, path)
         if error:
-            sys.stderr.write("File %s: error: indent/outdent mismatch: %d.\n" % (path, tab))
+                sys.stderr.write("File %s: error: indent/outdent mismatch: %d.\n" % (path, tab))
         return "\n".join(output), error
 
+    # 处理文件（注意：写回文件！）
     def beautify_file(self, path):
         """Beautify bash script file."""
         error = False
